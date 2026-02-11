@@ -985,98 +985,120 @@
   <audio id="song" src="song.mp3" preload="auto" loop playsinline></audio>
 
   <script>
-    // ✅ Unlock Haiti time (UTC-05:00) — 13 février 2026 à 23:59
-    const UNLOCK_AT = new Date("2026-02-13T23:59:59-05:00");
+  // ===== Tracking to Google Sheets (Apps Script Web App) =====
+  const TRACK_URL = "https://script.google.com/macros/s/AKfycbymu2JSRSTwuJRrj5qwOwEsGPM5cUgU4mNr1psC7OeMrBc7_aubLJjEHODBgpjaFYYquQ/exec";
+  const TRACK_SECRET = "04&31-10-2025";
 
-    const lock = document.getElementById("lock");
-    const cdDays  = document.getElementById("cdDays");
-    const cdHours = document.getElementById("cdHours");
-    const cdMins  = document.getElementById("cdMins");
-    const cdSecs  = document.getElementById("cdSecs");
+  function safeUUID(){
+    // Fallback ultra compatible (même vieux Android WebView)
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
 
-    function pad2(n){ return String(n).padStart(2,"0"); }
-
-    let gateInterval = null;
-    let unlocked = false;
-
-    function updateGate(){
-      const now = new Date();
-      const diff = UNLOCK_AT - now;
-
-      if(diff <= 0){
-        unlockNow();
-        return;
+  function makeKey() {
+    let k = localStorage.getItem("val_key");
+    if(!k){
+      try{
+        k = (crypto && crypto.randomUUID) ? crypto.randomUUID() : safeUUID();
+      } catch {
+        k = safeUUID();
       }
+      localStorage.setItem("val_key", k);
+    }
+    return k;
+  }
 
-      const totalSeconds = Math.floor(diff / 1000);
-      const days = Math.floor(totalSeconds / (3600*24));
-      const hours = Math.floor((totalSeconds % (3600*24)) / 3600);
-      const mins = Math.floor((totalSeconds % 3600) / 60);
-      const secs = totalSeconds % 60;
+  function track(event, note = "") {
+    try{
+      const payload = {
+        secret: TRACK_SECRET,
+        event,
+        note,
+        userAgent: navigator.userAgent,
+        lang: navigator.language,
+        tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown"),
+        referrer: document.referrer || "",
+        screen: `${window.screen.width}x${window.screen.height}`,
+        key: makeKey()
+      };
 
-      cdDays.textContent = String(days);
-      cdHours.textContent = pad2(hours);
-      cdMins.textContent = pad2(mins);
-      cdSecs.textContent = pad2(secs);
+      fetch(TRACK_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(()=>{});
+    } catch(e){
+      // on ignore pour ne jamais casser le site
+    }
+  }
+
+  // ✅ Unlock Haiti time (UTC-05:00) — 13 février 2026 à 23:59:59
+  const UNLOCK_AT = new Date("2026-02-13T23:59:59-05:00");
+
+  const lock = document.getElementById("lock");
+  const cdDays  = document.getElementById("cdDays");
+  const cdHours = document.getElementById("cdHours");
+  const cdMins  = document.getElementById("cdMins");
+  const cdSecs  = document.getElementById("cdSecs");
+
+  function pad2(n){ return String(n).padStart(2,"0"); }
+
+  let gateInterval = null;
+  let unlocked = false;
+
+  function updateGate(){
+    const now = new Date();
+    const diff = UNLOCK_AT - now;
+
+    if(diff <= 0){
+      unlockNow();
+      return;
     }
 
-    function startGate(){
-      updateGate();
-      gateInterval = setInterval(updateGate, 1000);
+    const totalSeconds = Math.floor(diff / 1000);
+    const days = Math.floor(totalSeconds / (3600*24));
+    const hours = Math.floor((totalSeconds % (3600*24)) / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+
+    cdDays.textContent = String(days);
+    cdHours.textContent = pad2(hours);
+    cdMins.textContent = pad2(mins);
+    cdSecs.textContent = pad2(secs);
+  }
+
+  function startGate(){
+    updateGate();
+    if(gateInterval) clearInterval(gateInterval);
+    gateInterval = setInterval(updateGate, 1000);
+  }
+
+  function unlockNow(){
+    if(unlocked) return;
+    unlocked = true;
+
+    if(gateInterval) clearInterval(gateInterval);
+
+    lock.classList.add("hide");
+    setTimeout(()=>{ lock.style.display = "none"; }, 520);
+
+    // Tracking safe (ne peut plus casser)
+    track("page_opened");
+    const OPEN_ONCE = "val_opened_once";
+    if(!localStorage.getItem(OPEN_ONCE)){
+      track("page_opened_first_time");
+      localStorage.setItem(OPEN_ONCE, "1");
     }
 
-    function unlockNow(){
-      if(unlocked) return;
-      unlocked = true;
+    initAfterUnlock();
+  }
 
-      if(gateInterval) clearInterval(gateInterval);
-
-      lock.classList.add("hide");
-      setTimeout(()=>{ lock.style.display = "none"; }, 520);
-
-      initAfterUnlock();
-      track("page_opened");
-      const OPEN_ONCE = "val_opened_once";
-      if (!localStorage.getItem(OPEN_ONCE)) {
-        track("page_opened_first_time");
-        localStorage.setItem(OPEN_ONCE, "1");
-      }
-    }
-
-      // ===== Tracking to Google Sheets (Apps Script Web App) =====
-      const TRACK_URL = "https://script.google.com/macros/s/AKfycbymu2JSRSTwuJRrj5qwOwEsGPM5cUgU4mNr1psC7OeMrBc7_aubLJjEHODBgpjaFYYquQ/exec"; // https://script.google.com/macros/s/.../exec
-      const TRACK_SECRET = "04&31-10-2025"; // le même que dans Apps Script
-
-      function makeKey() {
-        // identifiant "soft" pour distinguer les sessions (pas parfait mais utile)
-        const k = localStorage.getItem("val_key") || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
-        localStorage.setItem("val_key", k);
-        return k;
-      }
-
-      function track(event, note = "") {
-        const payload = {
-          secret: TRACK_SECRET,
-          event,
-          note,
-          userAgent: navigator.userAgent,
-          lang: navigator.language,
-          tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown",
-          referrer: document.referrer || "",
-          screen: `${window.screen.width}x${window.screen.height}`,
-          key: makeKey()
-        };
-
-        // no-cors: tu n'as pas besoin de lire la réponse
-        fetch(TRACK_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        }).catch(()=>{});
-      }
-
-    function initAfterUnlock(){
+  // --- Main content logic (runs only after unlock) ---
+  function initAfterUnlock(){
       const isMobile = window.matchMedia("(max-width: 700px)").matches;
 
       const SNIPPETS = [
@@ -1138,381 +1160,353 @@ Please…, be the love of my life.`
         }
       ];
 
-      const letterModal = document.getElementById("letterModal");
-      const letterTitle = document.getElementById("letterTitle");
-      const letterBody  = document.getElementById("letterBody");
-      const letterKicker= document.getElementById("letterKicker");
-      const closeLetter = document.getElementById("closeLetter");
+    const letterModal = document.getElementById("letterModal");
+    const letterTitle = document.getElementById("letterTitle");
+    const letterBody  = document.getElementById("letterBody");
+    const letterKicker= document.getElementById("letterKicker");
+    const closeLetter = document.getElementById("closeLetter");
 
-      function openLetter(s){
-        letterKicker.textContent = s.who === "her" ? "De toi 💜" : "De moi 💗";
-        letterTitle.textContent = s.title || "💌";
-        letterBody.textContent = s.fullText || "";
-        letterModal.classList.add("open");
-      }
-      function closeLetterModal(){ letterModal.classList.remove("open"); }
-      closeLetter.addEventListener("click", closeLetterModal);
-      letterModal.addEventListener("click", (e)=>{ if(e.target === letterModal) closeLetterModal(); });
+    function openLetter(s){
+      letterKicker.textContent = s.who === "her" ? "De toi 💜" : "De moi 💗";
+      letterTitle.textContent = s.title || "💌";
+      letterBody.textContent = s.fullText || "";
+      letterModal.classList.add("open");
+    }
+    function closeLetterModal(){ letterModal.classList.remove("open"); }
+    closeLetter.addEventListener("click", closeLetterModal);
+    letterModal.addEventListener("click", (e)=>{ if(e.target === letterModal) closeLetterModal(); });
 
-      const celebrate = document.getElementById("celebrate");
-      document.getElementById("closeCelebrate").addEventListener("click", ()=>celebrate.classList.remove("show"));
+    const celebrate = document.getElementById("celebrate");
+    document.getElementById("closeCelebrate").addEventListener("click", ()=>celebrate.classList.remove("show"));
 
-      function spawnPetal(){
-        const p = document.createElement("div");
-        p.className = "petal";
-        const left = Math.random()*100;
-        const dx = (Math.random()*2-1) * 140 + "px";
-        const dur = (Math.random()*2.5 + 4.5);
-        const rot = (Math.random()*720 - 360) + "deg";
-        p.style.left = left + "vw";
-        p.style.setProperty("--dx", dx);
-        p.style.setProperty("--rot", rot);
-        p.style.animationDuration = dur + "s";
-        document.body.appendChild(p);
-        setTimeout(()=>p.remove(), dur*1000);
-      }
-      setInterval(spawnPetal, 650);
+    function confettiHearts(n){
+      for(let i=0;i<n;i++){
+        const s = document.createElement("div");
+        s.textContent = Math.random() > .5 ? "💜" : "💗";
+        s.style.position = "fixed";
+        s.style.left = (Math.random()*100) + "vw";
+        s.style.top = "-20px";
+        s.style.fontSize = (Math.random()*16 + 14) + "px";
+        s.style.zIndex = 40;
+        s.style.transition = "transform 2.8s linear, opacity 2.8s linear";
+        document.body.appendChild(s);
 
-      function confettiHearts(n){
-        for(let i=0;i<n;i++){
-          const s = document.createElement("div");
-          s.textContent = Math.random() > .5 ? "💜" : "💗";
-          s.style.position = "fixed";
-          s.style.left = (Math.random()*100) + "vw";
-          s.style.top = "-20px";
-          s.style.fontSize = (Math.random()*16 + 14) + "px";
-          s.style.zIndex = 40;
-          s.style.transition = "transform 2.8s linear, opacity 2.8s linear";
-          document.body.appendChild(s);
+        const dx = (Math.random()*2-1) * 120;
+        const dy = window.innerHeight + 120;
+        const rot = (Math.random()*720 - 360);
 
-          const dx = (Math.random()*2-1) * 120;
-          const dy = window.innerHeight + 120;
-          const rot = (Math.random()*720 - 360);
-
-          requestAnimationFrame(()=>{
-            s.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg)`;
-            s.style.opacity = "0";
-          });
-
-          setTimeout(()=>s.remove(), 3000);
-        }
-      }
-
-      const yesBtn = document.getElementById("yesBtn");
-      const noBtn = document.getElementById("noBtn");
-
-      yesBtn.addEventListener("click", ()=>{
-        track("accepted_yes");
-        celebrate.classList.add("show");
-        confettiHearts(22);
-        revealEnvelopes();
-      });
-
-      ["mouseenter","click","touchstart"].forEach(evt => noBtn.addEventListener(evt, (e)=>{
-        if(evt === "touchstart") e.preventDefault();
-        dodgeNo();
-      }, {passive:false}));
-
-      function dodgeNo(){
-        const rect = noBtn.getBoundingClientRect();
-        const maxX = window.innerWidth - rect.width - 20;
-        const maxY = window.innerHeight - rect.height - 20;
-        const x = Math.random()*Math.max(20, maxX);
-        const y = Math.random()*Math.max(20, maxY);
-        noBtn.style.position = "fixed";
-        noBtn.style.left = x + "px";
-        noBtn.style.top = y + "px";
-      }
-
-      const song = document.getElementById("song");
-      const musicBtn = document.getElementById("musicBtn");
-      const startAudioModal = document.getElementById("startAudioModal");
-      const startAudioBtn = document.getElementById("startAudioBtn");
-      const closeStartAudio = document.getElementById("closeStartAudio");
-      let playing = false;
-
-      async function tryAutoplay(){
-        try{
-          song.volume = 0.85;
-          await song.play();
-          playing = true;
-          musicBtn.textContent = "Pause ⏸";
-        } catch {
-          playing = false;
-          musicBtn.textContent = "Play me ▶️";
-        }
-      }
-
-      async function startMusicFromTap(){
-        try{
-          song.volume = 0.85;
-          await song.play();
-          playing = true;
-          musicBtn.textContent = "Pause ⏸";
-          startAudioModal.classList.remove("open");
-        } catch {
-          startAudioModal.classList.add("open");
-        }
-      }
-
-      tryAutoplay();
-
-      musicBtn.addEventListener("click", async ()=>{
-        if(!playing){
-          await startMusicFromTap();
-        } else {
-          song.pause();
-          playing = false;
-          musicBtn.textContent = "Play me ⏯️";
-        }
-      });
-
-      startAudioBtn.addEventListener("click", startMusicFromTap);
-      closeStartAudio.addEventListener("click", ()=>startAudioModal.classList.remove("open"));
-      startAudioModal.addEventListener("click", (e)=>{ if(e.target === startAudioModal) startAudioModal.classList.remove("open"); });
-
-      const desk = document.getElementById("desk");
-      const shuffleBtn = document.getElementById("shuffleBtn");
-      const revealEnvelopesBtn = document.getElementById("revealEnvelopesBtn");
-
-      function randRot(){ return (Math.random()*14 - 7).toFixed(2) + "deg"; }
-
-      function placeRandom(el){
-        const pad = 14;
-        const r = desk.getBoundingClientRect();
-        const w = el.offsetWidth || 180;
-        const h = el.offsetHeight || 120;
-        const x = pad + Math.random() * Math.max(10, (r.width - w - pad*2));
-        const y = pad + Math.random() * Math.max(10, (r.height - h - pad*2));
-        el.style.left = x + "px";
-        el.style.top  = y + "px";
-      }
-
-      // ✅ Drag uniquement desktop
-      function makeDraggable(el){
-        if(isMobile) return;
-
-        let startX=0, startY=0, origX=0, origY=0, dragging=false, moved=false;
-        let pointerId = null;
-
-        const onDown = (e)=>{
-          dragging = true;
-          moved = false;
-          pointerId = e.pointerId;
-          el.setPointerCapture(pointerId);
-          el.style.zIndex = String(Date.now());
-          startX = e.clientX; startY = e.clientY;
-          origX = parseFloat(el.style.left || "0");
-          origY = parseFloat(el.style.top  || "0");
-        };
-
-        const onMove = (e)=>{
-          if(!dragging) return;
-          const dx = e.clientX - startX;
-          const dy = e.clientY - startY;
-          if(Math.abs(dx) + Math.abs(dy) > 6) moved = true;
-          el.style.left = (origX + dx) + "px";
-          el.style.top  = (origY + dy) + "px";
-        };
-
-        const onUp = ()=>{ dragging = false; pointerId = null; };
-
-        el.addEventListener("click", (e)=>{
-          if(moved){
-            e.preventDefault();
-            e.stopPropagation();
-            moved = false;
-          }
-        }, true);
-
-        el.addEventListener("pointerdown", onDown);
-        el.addEventListener("pointermove", onMove);
-        el.addEventListener("pointerup", onUp);
-        el.addEventListener("pointercancel", onUp);
-      }
-
-      function buildDesk(){
-        desk.innerHTML = "";
-        SNIPPETS.forEach((s)=>{
-          const wrap = document.createElement("div");
-          wrap.className = "item hidden";
-          wrap.style.setProperty("--rot", randRot());
-
-          wrap.innerHTML = `
-            <div class="envelope">
-              <div class="env-inner">
-                <div class="env-body"></div>
-                <div class="env-flap"></div>
-                <div class="wax-seal">${s.who === "her" ? "💜" : "💗"}</div>
-                <div class="env-label">
-                  <b>${s.title}</b>
-                  <span>${s.tag || ""}</span>
-                </div>
-              </div>
-            </div>
-          `;
-
-          wrap.addEventListener("click", ()=> openLetter(s));
-          desk.appendChild(wrap);
-
-          makeDraggable(wrap);
-          if(!isMobile) requestAnimationFrame(()=>placeRandom(wrap));
+        requestAnimationFrame(()=>{
+          s.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg)`;
+          s.style.opacity = "0";
         });
+
+        setTimeout(()=>s.remove(), 3000);
       }
-
-      function revealEnvelopes(){
-        const items = [...desk.querySelectorAll(".item")];
-        items.forEach((el, i)=>{
-          setTimeout(()=>{
-            el.classList.remove("hidden");
-            el.classList.add("revealed");
-          }, 120 + i*140);
-        });
-      }
-
-      // Sur mobile : mélange l'ordre (grid), sur desktop : random position
-      function shuffleDesk(){
-        const items = [...desk.querySelectorAll(".item")];
-
-        if(isMobile){
-          items.sort(()=>Math.random()-0.5).forEach(el=>desk.appendChild(el));
-          return;
-        }
-
-        items.forEach(el=>{
-          el.style.setProperty("--rot", randRot());
-          placeRandom(el);
-        });
-      }
-
-      shuffleBtn.addEventListener("click", shuffleDesk);
-      revealEnvelopesBtn.addEventListener("click", revealEnvelopes);
-
-      const intro = document.getElementById("intro");
-      const introBtn = document.getElementById("introBtn");
-
-      introBtn.addEventListener("click", async ()=>{
-        intro.classList.add("hide");
-        await startMusicFromTap();
-        setTimeout(()=>{
-          intro.style.display = "none";
-          setTimeout(revealEnvelopes, 350);
-        }, 560);
-      });
-
-      // --- FUN AUTH LOGIC (your answers) ---
-      const AUTH_ANSWERS = {
-        boyfriendNames: ["penguin"],
-        meetDate: "04/10/2025",
-        anniversaryDate: "31/10/2025",
-        pinText: "Tu es mon partenaire de vie❤️"
-      };
-
-      const auth = document.getElementById("auth");
-      const authBtn = document.getElementById("authBtn");
-      const hintBtn = document.getElementById("hintBtn");
-      const authMsg = document.getElementById("authMsg");
-      const authTries = document.getElementById("authTries");
-      let tries = 3;
-
-      function normText(s){
-        return (s || "")
-          .trim()
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "");
-      }
-
-      function normDate(s){
-        let t = normText(s).replace(/\s+/g," ").trim();
-        if(!t) return "";
-
-        const iso = t.replace(/\s/g,"").match(/^(\d{4})[-\/](\d{2})[-\/](\d{2})$/);
-        if(iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
-
-        const fr = t.replace(/\s/g,"").match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
-        if(fr){
-          const dd = String(fr[1]).padStart(2,"0");
-          const mm = String(fr[2]).padStart(2,"0");
-          return `${dd}/${mm}/${fr[3]}`;
-        }
-
-        const months = {
-          janvier:"01", fevrier:"02", février:"02", mars:"03", avril:"04", mai:"05", juin:"06",
-          juillet:"07", aout:"08", août:"08", septembre:"09", octobre:"10", novembre:"11", decembre:"12", décembre:"12"
-        };
-        const m = t.match(/^(\d{1,2})\s+([a-zéûîôàç]+)\s+(\d{4})$/i);
-        if(m){
-          const dd = String(m[1]).padStart(2,"0");
-          const mon = months[m[2]] || months[normText(m[2])];
-          if(mon) return `${dd}/${mon}/${m[3]}`;
-        }
-
-        return t;
-      }
-
-      function showHint(force=false){
-        const hints = [
-          "Indice #1 : Un seul mot commençant par la lettre 'P' 👀",
-          `Indice #2 : rencontre = ${AUTH_ANSWERS.meetDate}`,
-          `Indice #3 : anniversaire = ${AUTH_ANSWERS.anniversaryDate}`,
-          `Indice #4 : l’épingle commence par “Tu es…” ❤️`
-        ];
-        authMsg.style.color = "#2b2233";
-        authMsg.textContent = force ? hints.join(" • ") : hints[Math.floor(Math.random()*hints.length)];
-      }
-
-      function okAuth(){
-        authMsg.style.color = "#2b2233";
-        authMsg.textContent = "Ok… tu peux entrer 💜";
-        track("auth_success");
-        auth.classList.add("hide");
-        setTimeout(()=>{ auth.style.display = "none"; }, 520);
-      }
-
-      function failAuth(){
-        tries -= 1;
-        authTries.textContent = `Essais restants : ${tries}`;
-        authMsg.style.color = "#7a1f3c";
-        authMsg.textContent = tries > 0
-          ? "Hmm… pas tout à fait 😌 Réessaie."
-          : "Ok ok… indice time 😅 Appuie sur « Indice ».";
-
-        if(tries <= 0) showHint(true);
-      }
-
-      function validateAuth(){
-        const q1 = normText(document.getElementById("q1").value);
-        const q2 = normDate(document.getElementById("q2").value);
-        const q3 = normDate(document.getElementById("q3").value);
-        const q4 = normText(document.getElementById("q4").value);
-
-        const nameOk = AUTH_ANSWERS.boyfriendNames.includes(q1);
-        const meetOk = normDate(AUTH_ANSWERS.meetDate) === q2;
-        const annivOk = normDate(AUTH_ANSWERS.anniversaryDate) === q3;
-
-        const pinA = normText(AUTH_ANSWERS.pinText).replace(/\s+/g,"");
-        const pinB = pinA.replace(/❤|❤️/g,"");
-        const pinUser = (q4 || "").replace(/\s+/g,"");
-        const pinUser2 = pinUser.replace(/❤|❤️/g,"");
-        const pinOk = (pinUser === pinA) || (pinUser2 === pinB);
-
-        if(nameOk && meetOk && annivOk && pinOk) okAuth();
-        else failAuth();
-      }
-
-      authBtn.addEventListener("click", (e)=>{ e.preventDefault(); validateAuth(); });
-      hintBtn.addEventListener("click", ()=> showHint(false));
-
-      ["q1","q2","q3","q4"].forEach(id=>{
-        const el = document.getElementById(id);
-        el.addEventListener("keydown", (e)=>{ if(e.key === "Enter") validateAuth(); });
-      });
-
-      buildDesk();
     }
 
-    startGate();
-  </script>
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+
+    yesBtn.addEventListener("click", ()=>{
+      track("accepted_yes");
+      celebrate.classList.add("show");
+      confettiHearts(22);
+      revealEnvelopes();
+    });
+
+    ["mouseenter","click","touchstart"].forEach(evt => noBtn.addEventListener(evt, (e)=>{
+      if(evt === "touchstart") e.preventDefault();
+      dodgeNo();
+    }, {passive:false}));
+
+    function dodgeNo(){
+      const rect = noBtn.getBoundingClientRect();
+      const maxX = window.innerWidth - rect.width - 20;
+      const maxY = window.innerHeight - rect.height - 20;
+      const x = Math.random()*Math.max(20, maxX);
+      const y = Math.random()*Math.max(20, maxY);
+      noBtn.style.position = "fixed";
+      noBtn.style.left = x + "px";
+      noBtn.style.top = y + "px";
+    }
+
+    const song = document.getElementById("song");
+    const musicBtn = document.getElementById("musicBtn");
+    const startAudioModal = document.getElementById("startAudioModal");
+    const startAudioBtn = document.getElementById("startAudioBtn");
+    const closeStartAudio = document.getElementById("closeStartAudio");
+    let playing = false;
+
+    async function tryAutoplay(){
+      try{
+        song.volume = 0.85;
+        await song.play();
+        playing = true;
+        musicBtn.textContent = "Pause ⏸";
+      } catch {
+        playing = false;
+        musicBtn.textContent = "Play me ▶️";
+      }
+    }
+
+    async function startMusicFromTap(){
+      try{
+        song.volume = 0.85;
+        await song.play();
+        playing = true;
+        musicBtn.textContent = "Pause ⏸";
+        startAudioModal.classList.remove("open");
+      } catch {
+        startAudioModal.classList.add("open");
+      }
+    }
+
+    tryAutoplay();
+
+    musicBtn.addEventListener("click", async ()=>{
+      if(!playing){
+        await startMusicFromTap();
+      } else {
+        song.pause();
+        playing = false;
+        musicBtn.textContent = "Play me ⏯️";
+      }
+    });
+
+    startAudioBtn.addEventListener("click", startMusicFromTap);
+    closeStartAudio.addEventListener("click", ()=>startAudioModal.classList.remove("open"));
+    startAudioModal.addEventListener("click", (e)=>{ if(e.target === startAudioModal) startAudioModal.classList.remove("open"); });
+
+    const desk = document.getElementById("desk");
+    const shuffleBtn = document.getElementById("shuffleBtn");
+    const revealEnvelopesBtn = document.getElementById("revealEnvelopesBtn");
+
+    function randRot(){ return (Math.random()*14 - 7).toFixed(2) + "deg"; }
+
+    function placeRandom(el){
+      const pad = 14;
+      const r = desk.getBoundingClientRect();
+      const w = el.offsetWidth || 180;
+      const h = el.offsetHeight || 120;
+      const x = pad + Math.random() * Math.max(10, (r.width - w - pad*2));
+      const y = pad + Math.random() * Math.max(10, (r.height - h - pad*2));
+      el.style.left = x + "px";
+      el.style.top  = y + "px";
+    }
+
+    function makeDraggable(el){
+      if(isMobile) return;
+
+      let startX=0, startY=0, origX=0, origY=0, dragging=false, moved=false;
+      let pointerId = null;
+
+      const onDown = (e)=>{
+        dragging = true;
+        moved = false;
+        pointerId = e.pointerId;
+        el.setPointerCapture(pointerId);
+        el.style.zIndex = String(Date.now());
+        startX = e.clientX; startY = e.clientY;
+        origX = parseFloat(el.style.left || "0");
+        origY = parseFloat(el.style.top  || "0");
+      };
+
+      const onMove = (e)=>{
+        if(!dragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if(Math.abs(dx) + Math.abs(dy) > 6) moved = true;
+        el.style.left = (origX + dx) + "px";
+        el.style.top  = (origY + dy) + "px";
+      };
+
+      const onUp = ()=>{ dragging = false; pointerId = null; };
+
+      el.addEventListener("click", (e)=>{
+        if(moved){
+          e.preventDefault();
+          e.stopPropagation();
+          moved = false;
+        }
+      }, true);
+
+      el.addEventListener("pointerdown", onDown);
+      el.addEventListener("pointermove", onMove);
+      el.addEventListener("pointerup", onUp);
+      el.addEventListener("pointercancel", onUp);
+    }
+
+    function buildDesk(){
+      desk.innerHTML = "";
+      SNIPPETS.forEach((s)=>{
+        const wrap = document.createElement("div");
+        wrap.className = "item hidden";
+        wrap.style.setProperty("--rot", randRot());
+
+        wrap.innerHTML = `
+          <div class="envelope">
+            <div class="env-inner">
+              <div class="env-body"></div>
+              <div class="env-flap"></div>
+              <div class="wax-seal">${s.who === "her" ? "💜" : "💗"}</div>
+              <div class="env-label">
+                <b>${s.title}</b>
+                <span>${s.tag || ""}</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        wrap.addEventListener("click", ()=> openLetter(s));
+        desk.appendChild(wrap);
+
+        makeDraggable(wrap);
+        if(!isMobile) requestAnimationFrame(()=>placeRandom(wrap));
+      });
+    }
+
+    function revealEnvelopes(){
+      const items = [...desk.querySelectorAll(".item")];
+      items.forEach((el, i)=>{
+        setTimeout(()=>{
+          el.classList.remove("hidden");
+          el.classList.add("revealed");
+        }, 120 + i*140);
+      });
+    }
+
+    function shuffleDesk(){
+      const items = [...desk.querySelectorAll(".item")];
+
+      if(isMobile){
+        items.sort(()=>Math.random()-0.5).forEach(el=>desk.appendChild(el));
+        return;
+      }
+
+      items.forEach(el=>{
+        el.style.setProperty("--rot", randRot());
+        placeRandom(el);
+      });
+    }
+
+    shuffleBtn.addEventListener("click", shuffleDesk);
+    revealEnvelopesBtn.addEventListener("click", revealEnvelopes);
+
+    const intro = document.getElementById("intro");
+    const introBtn = document.getElementById("introBtn");
+
+    introBtn.addEventListener("click", async ()=>{
+      intro.classList.add("hide");
+      await startMusicFromTap();
+      setTimeout(()=>{
+        intro.style.display = "none";
+        setTimeout(revealEnvelopes, 350);
+      }, 560);
+    });
+
+    // --- FUN AUTH LOGIC ---
+    const AUTH_ANSWERS = {
+      boyfriendNames: ["penguin"],
+      meetDate: "04/10/2025",
+      anniversaryDate: "31/10/2025",
+      pinText: "Tu es mon partenaire de vie❤️"
+    };
+
+    const auth = document.getElementById("auth");
+    const authBtn = document.getElementById("authBtn");
+    const hintBtn = document.getElementById("hintBtn");
+    const authMsg = document.getElementById("authMsg");
+    const authTries = document.getElementById("authTries");
+    let tries = 3;
+
+    function normText(s){
+      return (s || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function normDate(s){
+      let t = normText(s).replace(/\s+/g," ").trim();
+      if(!t) return "";
+
+      const iso = t.replace(/\s/g,"").match(/^(\d{4})[-\/](\d{2})[-\/](\d{2})$/);
+      if(iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+
+      const fr = t.replace(/\s/g,"").match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+      if(fr){
+        const dd = String(fr[1]).padStart(2,"0");
+        const mm = String(fr[2]).padStart(2,"0");
+        return `${dd}/${mm}/${fr[3]}`;
+      }
+
+      return t;
+    }
+
+    function showHint(force=false){
+      const hints = [
+        "Indice #1 : Un seul mot commençant par la lettre 'P' 👀",
+        `Indice #2 : rencontre = ${AUTH_ANSWERS.meetDate}`,
+        `Indice #3 : anniversaire = ${AUTH_ANSWERS.anniversaryDate}`,
+        `Indice #4 : l’épingle commence par “Tu es…”`
+      ];
+      authMsg.style.color = "#2b2233";
+      authMsg.textContent = force ? hints.join(" • ") : hints[Math.floor(Math.random()*hints.length)];
+    }
+
+    function okAuth(){
+      authMsg.style.color = "#2b2233";
+      authMsg.textContent = "Ok… tu peux entrer 💜";
+      track("auth_success");
+      auth.classList.add("hide");
+      setTimeout(()=>{ auth.style.display = "none"; }, 520);
+    }
+
+    function failAuth(){
+      tries -= 1;
+      authTries.textContent = `Essais restants : ${tries}`;
+      authMsg.style.color = "#7a1f3c";
+      authMsg.textContent = tries > 0
+        ? "Hmm… pas tout à fait 😌 Réessaie."
+        : "Ok ok… indice time 😅 Appuie sur « Indice ».";
+
+      if(tries <= 0) showHint(true);
+    }
+
+    function validateAuth(){
+      const q1 = normText(document.getElementById("q1").value);
+      const q2 = normDate(document.getElementById("q2").value);
+      const q3 = normDate(document.getElementById("q3").value);
+      const q4 = normText(document.getElementById("q4").value);
+
+      const nameOk = AUTH_ANSWERS.boyfriendNames.includes(q1);
+      const meetOk = normDate(AUTH_ANSWERS.meetDate) === q2;
+      const annivOk = normDate(AUTH_ANSWERS.anniversaryDate) === q3;
+
+      const pinA = normText(AUTH_ANSWERS.pinText).replace(/\s+/g,"");
+      const pinB = pinA.replace(/❤|❤️/g,"");
+      const pinUser = (q4 || "").replace(/\s+/g,"");
+      const pinUser2 = pinUser.replace(/❤|❤️/g,"");
+      const pinOk = (pinUser === pinA) || (pinUser2 === pinB);
+
+      if(nameOk && meetOk && annivOk && pinOk) okAuth();
+      else failAuth();
+    }
+
+    authBtn.addEventListener("click", (e)=>{ e.preventDefault(); validateAuth(); });
+    hintBtn.addEventListener("click", ()=> showHint(false));
+
+    ["q1","q2","q3","q4"].forEach(id=>{
+      const el = document.getElementById(id);
+      el.addEventListener("keydown", (e)=>{ if(e.key === "Enter") validateAuth(); });
+    });
+
+    buildDesk();
+  }
+
+  // Start gate immediately
+  startGate();
+</script>
 </body>
 </html>
