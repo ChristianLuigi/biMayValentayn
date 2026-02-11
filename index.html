@@ -1035,7 +1035,46 @@
       setTimeout(()=>{ lock.style.display = "none"; }, 520);
 
       initAfterUnlock();
+      track("page_opened");
+      const OPEN_ONCE = "val_opened_once";
+      if (!localStorage.getItem(OPEN_ONCE)) {
+        track("page_opened_first_time");
+        localStorage.setItem(OPEN_ONCE, "1");
+      }
     }
+    
+      // ===== Tracking to Google Sheets (Apps Script Web App) =====
+      const TRACK_URL = "https://script.google.com/macros/s/AKfycbymu2JSRSTwuJRrj5qwOwEsGPM5cUgU4mNr1psC7OeMrBc7_aubLJjEHODBgpjaFYYquQ/exec"; // https://script.google.com/macros/s/.../exec
+      const TRACK_SECRET = "04&31-10-2025"; // le même que dans Apps Script
+
+      function makeKey() {
+        // identifiant "soft" pour distinguer les sessions (pas parfait mais utile)
+        const k = localStorage.getItem("val_key") || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+        localStorage.setItem("val_key", k);
+        return k;
+      }
+
+      function track(event, note = "") {
+        const payload = {
+          secret: TRACK_SECRET,
+          event,
+          note,
+          userAgent: navigator.userAgent,
+          lang: navigator.language,
+          tz: Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown",
+          referrer: document.referrer || "",
+          screen: `${window.screen.width}x${window.screen.height}`,
+          key: makeKey()
+        };
+
+        // no-cors: tu n'as pas besoin de lire la réponse
+        fetch(TRACK_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(()=>{});
+      }
 
     function initAfterUnlock(){
       const isMobile = window.matchMedia("(max-width: 700px)").matches;
@@ -1163,6 +1202,7 @@ Please…, be the love of my life.`
       const noBtn = document.getElementById("noBtn");
 
       yesBtn.addEventListener("click", ()=>{
+        track("accepted_yes");
         celebrate.classList.add("show");
         confettiHearts(22);
         revealEnvelopes();
@@ -1425,6 +1465,7 @@ Please…, be the love of my life.`
       function okAuth(){
         authMsg.style.color = "#2b2233";
         authMsg.textContent = "Ok… tu peux entrer 💜";
+        track("auth_success");
         auth.classList.add("hide");
         setTimeout(()=>{ auth.style.display = "none"; }, 520);
       }
