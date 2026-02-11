@@ -611,7 +611,36 @@
         <button class="yes" id="introBtn">Click moi</button>
       </div>
     </div>
+  </div><!-- Fun Auth overlay -->
+  <div class="auth" id="auth">
+    <div class="auth-card">
+      <div class="auth-pill">🔐 Mini check avant d’entrer</div>
+      <h2 class="auth-title">Ok… prouve que c’est toi 😌</h2>
+      <p class="auth-sub">Juste 3 petites questions. Pas de stress. 💜</p>
+
+      <div class="auth-form">
+        <label class="auth-label" for="q1">1) Nom de ton p’tit ami ?</label>
+        <input class="auth-input" id="q1" type="text" autocomplete="off" placeholder="Ex: Luigi" />
+
+        <label class="auth-label" for="q2">2) Date de notre rencontre ?</label>
+        <input class="auth-input" id="q2" type="text" inputmode="numeric" autocomplete="off"
+              placeholder="Ex: 31/10/2025" />
+
+        <label class="auth-label" for="q3">3) Notre anniversaire (date) ?</label>
+        <input class="auth-input" id="q3" type="text" inputmode="numeric" autocomplete="off"
+              placeholder="Ex: 14/02/2026" />
+
+        <div class="auth-row">
+          <button class="yes" id="authBtn">Entrer 💌</button>
+          <button class="ghost" id="hintBtn" type="button">Indice 👀</button>
+        </div>
+
+        <div class="auth-msg" id="authMsg"></div>
+        <div class="auth-tries" id="authTries">Essais restants : 3</div>
+      </div>
+    </div>
   </div>
+
 
   <div class="app">
     <section class="card left">
