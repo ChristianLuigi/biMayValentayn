@@ -163,13 +163,8 @@
     }
     button:active{ transform: translateY(1px) scale(.99); }
 
-    .yes{
-      background: linear-gradient(135deg, #ffffff, var(--pink2));
-    }
-    .no{
-      background: linear-gradient(135deg, #ffffff, var(--lavender2));
-      position:relative;
-    }
+    .yes{ background: linear-gradient(135deg, #ffffff, var(--pink2)); }
+    .no{ background: linear-gradient(135deg, #ffffff, var(--lavender2)); position:relative; }
     .ghost{
       opacity:.92;
       background: rgba(255,255,255,.62);
@@ -230,7 +225,7 @@
         linear-gradient(135deg, rgba(184,155,227,.26), rgba(247,183,210,.26));
       border: 1px solid rgba(255,255,255,.65);
       overflow:hidden;
-      touch-action: none;
+      touch-action:none;
     }
 
     .desk::after{
@@ -250,7 +245,7 @@
       transform: rotate(var(--rot, 0deg));
       transition: filter .2s ease, transform .18s ease;
       will-change: transform, left, top;
-      touch-action: none;
+      touch-action:none;
     }
     .item:active{ cursor:grabbing; }
     .item:hover{ filter: drop-shadow(0 16px 24px rgba(31,16,48,.18)); }
@@ -287,15 +282,8 @@
       font-size:12.2px;
       line-height:1.15;
     }
-    .env-label b{
-      display:block;
-      font-size:12.2px;
-      font-weight:1000;
-    }
-    .env-label span{
-      opacity:.78;
-      font-weight:900;
-    }
+    .env-label b{ display:block; font-size:12.2px; font-weight:1000; }
+    .env-label span{ opacity:.78; font-weight:900; }
 
     .wax-seal{
       position:absolute;
@@ -458,9 +446,7 @@
       animation: fall linear forwards;
     }
     @keyframes fall{
-      to{
-        transform: translate3d(var(--dx), 120vh, 0) rotate(var(--rot));
-      }
+      to{ transform: translate3d(var(--dx), 120vh, 0) rotate(var(--rot)); }
     }
 
     .start-audio-box{
@@ -468,11 +454,7 @@
       background: rgba(255,255,255,.94);
       text-align:center;
     }
-    .start-audio-title{
-      font-weight:1000;
-      font-size:18px;
-      margin:0 0 10px;
-    }
+    .start-audio-title{ font-weight:1000; font-size:18px; margin:0 0 10px; }
 
     /* Intro overlay */
     .intro{
@@ -773,10 +755,63 @@
 
     @media (max-width: 520px){
       .left{ padding:22px 16px 18px; }
-      .envelope{ width: 168px; height: 112px; }
-      .desk{ min-height: 360px; }
       .auth-row button{ width:100%; }
       .cd-box{ min-width: 138px; }
+    }
+
+    /* ✅✅ PATCH MOBILE (contenu coupé + enveloppes moches) */
+    @media (max-width: 700px){
+      body{
+        align-items:flex-start;
+        overflow:auto;
+        min-height:100dvh;
+        padding: calc(env(safe-area-inset-top) + 12px) 0 18px;
+      }
+      .app{
+        width: min(720px, 94vw);
+        margin: 0 auto;
+      }
+      .row{
+        flex-direction:column;
+        gap:10px;
+      }
+      .row button{
+        width: min(380px, 100%);
+      }
+      .scrap-top{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .scrap-actions{
+        justify-content:flex-start;
+        width:100%;
+      }
+
+      /* Sur mobile : desk en grille 2 colonnes (pas de drag, pas d'absolu) */
+      .desk{
+        min-height: unset;
+        padding: 14px;
+        overflow: visible;
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        touch-action: manipulation;
+      }
+      .desk::after{ border-radius:18px; }
+      .item{
+        position:relative !important;
+        left:auto !important;
+        top:auto !important;
+        cursor:pointer !important;
+        touch-action: manipulation !important;
+        filter:none !important;
+      }
+      .envelope{
+        width:100% !important;
+        height:auto !important;
+        aspect-ratio: 3 / 2;
+      }
+      .wax-seal{ top:40%; }
     }
   </style>
 </head>
@@ -951,8 +986,8 @@
   <audio id="song" src="song.mp3" preload="auto" loop playsinline></audio>
 
   <script>
-    // UNLOCK TIME (fixed Haiti time UTC-05:00)
-    const UNLOCK_AT = new Date("2026-02-10T22:45:00-05:00");
+    // ✅ Unlock Haiti time (UTC-05:00) — 13 février 2026 à 23:59
+    const UNLOCK_AT = new Date("2026-02-10T23:11:00-05:00");
 
     const lock = document.getElementById("lock");
     const cdDays  = document.getElementById("cdDays");
@@ -1000,12 +1035,11 @@
       lock.classList.add("hide");
       setTimeout(()=>{ lock.style.display = "none"; }, 520);
 
-      // only now we fully init the page behaviors (autoplay, build, events, etc.)
       initAfterUnlock();
     }
 
-    // --- Main content logic (runs only after unlock) ---
     function initAfterUnlock(){
+      const isMobile = window.matchMedia("(max-width: 700px)").matches;
 
       const SNIPPETS = [
         {
@@ -1083,8 +1117,7 @@ Please…, be the love of my life.`
       letterModal.addEventListener("click", (e)=>{ if(e.target === letterModal) closeLetterModal(); });
 
       const celebrate = document.getElementById("celebrate");
-      const closeCelebrate = document.getElementById("closeCelebrate");
-      closeCelebrate.addEventListener("click", ()=>celebrate.classList.remove("show"));
+      document.getElementById("closeCelebrate").addEventListener("click", ()=>celebrate.classList.remove("show"));
 
       function spawnPetal(){
         const p = document.createElement("div");
@@ -1136,8 +1169,7 @@ Please…, be the love of my life.`
         revealEnvelopes();
       });
 
-      const dodgeEvents = ["mouseenter","click","touchstart"];
-      dodgeEvents.forEach(evt => noBtn.addEventListener(evt, (e)=>{
+      ["mouseenter","click","touchstart"].forEach(evt => noBtn.addEventListener(evt, (e)=>{
         if(evt === "touchstart") e.preventDefault();
         dodgeNo();
       }, {passive:false}));
@@ -1184,7 +1216,6 @@ Please…, be the love of my life.`
         }
       }
 
-      // autoplay attempt after unlock only
       tryAutoplay();
 
       musicBtn.addEventListener("click", async ()=>{
@@ -1218,7 +1249,10 @@ Please…, be the love of my life.`
         el.style.top  = y + "px";
       }
 
+      // ✅ Drag uniquement desktop
       function makeDraggable(el){
+        if(isMobile) return;
+
         let startX=0, startY=0, origX=0, origY=0, dragging=false, moved=false;
         let pointerId = null;
 
@@ -1242,10 +1276,7 @@ Please…, be the love of my life.`
           el.style.top  = (origY + dy) + "px";
         };
 
-        const onUp = ()=>{
-          dragging = false;
-          pointerId = null;
-        };
+        const onUp = ()=>{ dragging = false; pointerId = null; };
 
         el.addEventListener("click", (e)=>{
           if(moved){
@@ -1284,8 +1315,9 @@ Please…, be the love of my life.`
 
           wrap.addEventListener("click", ()=> openLetter(s));
           desk.appendChild(wrap);
+
           makeDraggable(wrap);
-          requestAnimationFrame(()=>placeRandom(wrap));
+          if(!isMobile) requestAnimationFrame(()=>placeRandom(wrap));
         });
       }
 
@@ -1299,8 +1331,16 @@ Please…, be the love of my life.`
         });
       }
 
+      // Sur mobile : mélange l'ordre (grid), sur desktop : random position
       function shuffleDesk(){
-        [...desk.querySelectorAll(".item")].forEach(el=>{
+        const items = [...desk.querySelectorAll(".item")];
+
+        if(isMobile){
+          items.sort(()=>Math.random()-0.5).forEach(el=>desk.appendChild(el));
+          return;
+        }
+
+        items.forEach(el=>{
           el.style.setProperty("--rot", randRot());
           placeRandom(el);
         });
@@ -1429,11 +1469,9 @@ Please…, be the love of my life.`
         el.addEventListener("keydown", (e)=>{ if(e.key === "Enter") validateAuth(); });
       });
 
-      // build desk after unlock
       buildDesk();
     }
 
-    // Start gate immediately on load
     startGate();
   </script>
 </body>
