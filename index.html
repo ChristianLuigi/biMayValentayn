@@ -1428,6 +1428,11 @@ Please…, be the love of my life.`
         .replace(/[\u0300-\u036f]/g, "");
     }
 
+    function normPin(s){
+    // lowercases + removes accents via normText(), then removes spaces/punctuation/emojis/hearts/etc.
+      return normText(s).replace(/[^a-z0-9]/g, "");
+    }
+
     function normDate(s){
       let t = normText(s).replace(/\s+/g," ").trim();
       if(!t) return "";
@@ -1489,7 +1494,7 @@ Please…, be the love of my life.`
       const pinB = pinA.replace(/❤|❤️/g,"");
       const pinUser = (q4 || "").replace(/\s+/g,"");
       const pinUser2 = pinUser.replace(/❤|❤️/g,"");
-      const pinOk = (pinUser === pinA) || (pinUser2 === pinB);
+      const pinOk = normPin(document.getElementById("q4").value) === normPin(AUTH_ANSWERS.pinText);
 
       if(nameOk && meetOk && annivOk && pinOk) okAuth();
       else failAuth();
